@@ -1,0 +1,72 @@
+#/bin/bash
+
+cd /backups/zmigrate
+
+## Restore all domains
+for i in `cat /backups/zmigrate/domains.txt `; do  zmprov cd $i zimbraAuthMech zimbra ;echo $i ;done
+
+
+# Create email accounts and set the old password
+USERPASS="/backups/zmigrate/userpass"
+USERDDATA="/backups/zmigrate/userdata"
+USERS="/backups/zmigrate/emails.txt"
+for i in `cat $USERS`
+do
+givenName=$(grep givenName: $USERDDATA/$i.txt | cut -d ":" -f2)
+displayName=$(grep displayName: $USERDDATA/$i.txt | cut -d ":" -f2)
+shadowpass=$(cat $USERPASS/$i.shadow)
+tmpPass="CHANGEme"
+zmprov ca $i CHANGEme cn "$givenName" displayName "$displayName" givenName "$givenName"
+zmprov ma $i userPassword "$shadowpass"
+done
+
+
+## Now recreate the distribution lists
+for i in `cat distributinlist.txt`; do zmprov cdl $i ; echo "$i -- done " ; done
+
+
+## Restore the distribution lists
+for i in `cat distributinlist.txt`
+do
+        for j in `grep -v '#' distributinlist_members/$i.txt |grep '@'`
+        do
+        zmprov adlm $i $j
+        echo " $j member has been added to list $i"
+        done
+
+done
+
+
+## Restore Alias accounts
+for i in `cat /backups/zmigrate/emails.txt`
+do
+        if [ -f "alias/$i.txt" ]; then
+        for j in `grep '@' /backups/zmigrate/alias/$i.txt`
+        do
+        zmprov aaa $i $j
+        echo "$i HAS ALIAS $j --- Restored"
+        done
+        fi
+done
+
+
+## Restore Email Signatures
+for i in `cat emails.txt`; do
+        zmprov ma $i zimbraSignatureName "`cat /backups/zmigrate/signature/$i.name`";
+        zmprov ma $i zimbraPrefMailSignature "`cat /backups/zmigrate/signature/$i.signature`";
+        zmprov ga $i zimbraSignatureId > /backups/zmigrate/firmaid; sed -i -e "1d" /tmp/firmaid;
+        firmaid=`sed 's/zimbraSignatureId: //g' /backups/zmigrate/firmaid`;
+        zmprov ma $i zimbraPrefDefaultSignatureId "$firmaid";
+        zmprov ma $i zimbraPrefForwardReplySignatureId "$firmaid";
+        rm -rf /backups/zmigrate/firmaid ;
+        echo $i "done!";
+done
+
+##  Restore Email Filters
+for i in `cat emails.txt`; do
+    zmprov ma  $i zimbraMailSieveScript "`cat /backups/zmigrate/filter/$i.filter`";
+    echo "Filter Restore for account ... $i"; 
+  
+done
+
+

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+cd /backups/zmigrate
+
+## Now backup all email account. This will take some time!!!
+for email in `cat /backups/zmigrate/emails.txt`; do  zmmailbox -z -m $email getRestURL '/?fmt=tgz' > $email.tgz ;  echo $email ; done

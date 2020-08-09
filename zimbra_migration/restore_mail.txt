@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cd /backups/zmigrate
+
+##  Restore email accounts
+for i in `cat /backups/zmigrate/emails.txt`; do zmmailbox -z -m $i postRestURL "/?fmt=tgz&resolve=skip" /backups/zmigrate/$i.tgz ;  echo "$i -- finished "; done
+
